@@ -74,6 +74,14 @@ Trimming as used in function "ncpro()" should be changed to use function "ezMeth
 The functions "trimMirna" and "ezMethodTrim()" are not called with the same parameters. The former has parameters "input", "output" and "param" where the first is the input filename, the second is the name of the output file and the last is a list of parameters. The arguments of "ezMethodTrim" have the same name, but are expected to be instances of of the reference class "EzDataset".  
 
 ### Function ezMethodTrim()
+Trimming in function `ezMethodTrim()` can be done with two programs. 
+
+1. TRIMMOMATIC
+2. FLEXBAR
+
+Depending on the specified parameters in list "param", either both, only one of them or none of the trimming programs are run. 
+
+#### Function arguments
 Function parameters of function `ezMethodTrim()` are
 
 * input
@@ -82,6 +90,40 @@ Function parameters of function `ezMethodTrim()` are
 
 The first two parameters (input and output) are expected to be instances of the reference class "EzDataset". The function parameter `param` is expected to be a list with components that are listed above as parameters of "ezMethodTrim()". 
 
+#### Output settings
+The first step in function "ezMethodTrim()" checks whether an output object of reference class "EzDataset" was passed as function argument, if not output is initialized as a copy of input and paths to read files are appended with the extension "-trimmed-R<n>.fastq" which will later be used as names of result files.
+
+#### Multi-sample Option
+The function "ezMethodTrim()" handles multiple samples by calling itself recursively for each single sample given in the input object. 
+
+#### Setting default values
+After the recursive calls, the rest of the function is assumed to work with only one sample. The first statements in the single sample section of the function code is setting some default values in the parameter list "param". The components that are initialized are shown in the following table
+
+
+Component                |  Default value  
+------------------------ | ---------------:
+trimSeedMismatches       |  1              
+trimPalindromClipThresh  |  20              
+trimSimpleClipThresh     |  7              
+trimMinAdaptLength       |  5              
+trimKeepBothReads        |  true           
+trimQualWindowWidth      |  4              
+
+#### Read subsampling
+In case parameter-components "subsampleReads" > 1 or "nReads" > 0 then the function `ezMethodSubsampleReads()` is called. 
+
+#### Parameters specific for TRIMMOMATIC
+The boolean component "trimAdapter" indicates whether specific adapter sequences should be trimmed by TRIMMOMATIC. The parameters given to TRIMMOMATIC are grouped into four different categories which are all saved in a different string variable
+
+1. readOpts: specify input filename and output filename separated by a space
+2. trimAdaptOpt: options related to trimming of the adapters. Start with keyword "ILLUMINACLIP", followed by name of file where adapter sequences are stored , and other default options such as: trimSeedMismatches, trimPalindromClipThresh, trimSimpleClipThresh, trimMinAdaptLength, trimKeepBothReads
+3. tailQualOpt: tail quality option. Starts with keyword "SLIDINGWINDOW" and contain values of parameter components trimQualWindowWidth and minTailQuality
+4. minAvgQualOpt: minimum average quality option. Starts with keyword "AVGQUAL" followed by the parameter component minAvgQuality. 
+
+Adapter sequences are read from a file given by the global variable "TRIMMOMATIC_ADAPTERS". If an adapter sequence is given in the input metainformation, then it is added to the adapters read from the file. The combined set of adapters is used as a command-line argument for TRIMMOMATIC and all adapters are written to a file called "adapters.fa". The name of this file together with other parameter settings related to trimming is written into a colon separated list of options after the keyword "ILLUMINACLIP". The whole string of options is stored in a variable called `trimAdaptOpt`. If the parameter-component "trimAdapter" not set to TRUE, the adapter options in `trimAdaptOpt` are left empty.
+
+#### Parameters specific for FLEXBAR
+From the comments in the code, it seams that in the context of ezMethodTrim, unlike when used in function `trimMirna()`, FLEXBAR here is used for fixed trimming, as it is used with option  "--pre-trim-left" followed by a number which most likely indicates the number of positions to be trimmed on the left and similar for option "--pre-trim-right".  
 
 
 ## Comparison
