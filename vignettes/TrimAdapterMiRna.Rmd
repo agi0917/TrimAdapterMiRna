@@ -145,5 +145,68 @@ rw-rw-r-- 1 petervr SG_Users 26292548 Jan 15 16:18 test1_R1.fastq
 
 where the files with extension .flexbar.out are the output of the flexbar program and the files ending in .fastq are the trimmed readfiles. 
 
+### Results using trimMirna
+The result files from running `trimMirna()` are shown above. The number of lines in the fastq files are as follows
+
+```
+petervr@fgcz-176:/scratch/PVR_test/ncPRO_Result$ ls -1 *.fastq | while read f;do echo $f;wc -l $f;sleep 2;done
+test1_R1.fastq
+930856 test1_R1.fastq
+test2_R1.fastq
+929172 test2_R1.fastq
+```
+
+### Results using ezMethodTrim
+The results after trimming with TRIMMOMATIC look as follows
+
+```
+petervr@fgcz-176:/scratch/PVR_test/ncPRO_Result$ ls -1 *.fastq | while read f;do echo $f;wc -l $f;sleep 2;done
+test1-trimmed-R1.fastq
+879144 test1-trimmed-R1.fastq
+test2-trimmed-R1.fastq
+873244 test2-trimmed-R1.fastq
+```
 
 
+## Evaluation of comparison
+The two trimming methods
+
+1. `trimMirna` and
+2. `ezMethodTrim`
+
+give different results. It would be interesting to check which reads are kept by the first method and whether those are really such bad quality that it is worth to throw them away. 
+
+### Minimum read length
+With `trimMirna` the minimum read length is set to 18, when running `ezMethodTrim` with default values it uses minimum read length 20. This brings down the difference to 
+
+for method `ezMethodTrim` 
+```
+petervr@fgcz-176:/scratch/PVR_test/20160129095934-ezMethodTrim$ ls -1 *.fastq |  while read f;do echo $f;wc -l $f;sleep 2;done
+test1-trimmed-R1.fastq
+917004 test1-trimmed-R1.fastq
+test2-trimmed-R1.fastq
+917640 test2-trimmed-R1.fastq
+```
+
+and for method `trimMirna`
+```
+petervr@fgcz-176:/scratch/PVR_test/20160129095934-ezMethodTrim$ ls -1 ../20160129095117-trimmirna/*.fastq |  while read f;do echo $f;wc -l $f;sleep 2;done
+../20160129095117-trimmirna/test1_R1.fastq
+930856 ../20160129095117-trimmirna/test1_R1.fastq
+../20160129095117-trimmirna/test2_R1.fastq
+929172 ../20160129095117-trimmirna/test2_R1.fastq
+```
+
+### Assessment of read quality
+The remaining differences between trimming method were evaluated by checking the quality of the reads that were removed in addition to when using the new trimming method `ezMethodTrim` compared to the existing trimming method `trimMirna`. Read quality was assessed using two different approaches
+
+1. function `qa()` from BioC package `ShortRead` and 
+2. the stand-alone tool `fastqc()`
+
+In both cases the output is an html-report which shows different characteristics of the reads.
+
+### Searching for the differentially trimmed reads
+Before the quality of the differentially trimmed reads could be assessed, they first had to be identified. With differentially trimmed reads, we mean the reads that were trimmed by one method but not by the other. The results shown here look at the quality of reads that are eliminated by `ezMethodTrim` but not by `trimMirna`. The quality of those reads is interesting, because, if those reads thrown away by `ezMethodTrim` is low, then we can keep the settings and do not have to care about bringing those reads back into any subsequent analyses again.
+
+### Finding differentially trimmed reads
+Fastq files that were produced after trimming with both methods are read using function `ShortRead::readFastq()`. This function returns an object of class `ShortReadQ`. Applying the accessor function `id()` returns an object of type `BSString` which can be converted into a vector of read ids using coersion by `as.vector()`. Extracting vector of ids for both fastq files that come out of the trimming process and subsequently computing `setdiff()` on the two vectors of read ids resulted in the set of read ids of differentially trimmed reads. This vector was used to extract the reads from the original `ShortReadQ` object. All of this is implemented in a function called `findReadDiff` The differntially trimmed read are written to a fastq file using `ShortRead::writeFastq()`.  
